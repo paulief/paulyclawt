@@ -1,0 +1,5 @@
+fitness.db
+fitness.db-wal
+fitness.db-shm
+__pycache__/
+*.pyc

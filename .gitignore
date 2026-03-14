@@ -1,0 +1,33 @@
+# Secrets & keys
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+*.secret
+**/secrets/
+**/credentials/
+
+# API keys in config files
+config.local.*
+*.credentials.json
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build artifacts
+dist/
+build/
+*.o
+*.so

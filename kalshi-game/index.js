@@ -30,6 +30,12 @@ function formatMarketMessage(market) {
 
   const yesBid = parseFloat(market.yes_bid_dollars || market.yes_bid || 0);
   const noBid = parseFloat(market.no_bid_dollars || market.no_bid || 0);
+  const yesAsk = parseFloat(market.yes_ask_dollars || market.yes_ask || 0);
+  const noAsk = parseFloat(market.no_ask_dollars || market.no_ask || 0);
+
+  // Use bid if available, otherwise use ask, otherwise derive from opposite side
+  const yesPrice = yesBid || (yesAsk && yesAsk < 1 ? yesAsk : (noBid ? 1 - noBid : 0));
+  const noPrice = noBid || (noAsk && noAsk < 1 ? noAsk : (yesBid ? 1 - yesBid : 0));
 
   return `🎲 **Daily Market Pick** | ${new Date().toLocaleDateString('en-US', {
     month: 'long',
@@ -40,8 +46,8 @@ function formatMarketMessage(market) {
 **${market.title}**
 
 📊 **Current Odds:**
-• YES: ${(yesBid * 100).toFixed(0)}¢ (${(yesBid * 100).toFixed(0)}%)
-• NO: ${(noBid * 100).toFixed(0)}¢ (${(noBid * 100).toFixed(0)}%)
+• YES: ${(yesPrice * 100).toFixed(0)}¢ (${(yesPrice * 100).toFixed(0)}%)
+• NO: ${(noPrice * 100).toFixed(0)}¢ (${(noPrice * 100).toFixed(0)}%)
 
 📈 **Activity:**
 • Volume: ${volumeDollars}
@@ -137,13 +143,18 @@ async function sendDailyMarket() {
 
     const yesBid = parseFloat(market.yes_bid_dollars || market.yes_bid || 0);
     const noBid = parseFloat(market.no_bid_dollars || market.no_bid || 0);
+    const yesAsk = parseFloat(market.yes_ask_dollars || market.yes_ask || 0);
+    const noAsk = parseFloat(market.no_ask_dollars || market.no_ask || 0);
+
+    const yesPrice = yesBid || (yesAsk && yesAsk < 1 ? yesAsk : (noBid ? 1 - noBid : 0));
+    const noPrice = noBid || (noAsk && noAsk < 1 ? noAsk : (yesBid ? 1 - yesBid : 0));
 
     return {
       message,
       market,
       buttons: [
-        { text: `📈 Bet YES - ${(yesBid * 100).toFixed(0)}¢`, callback_data: `bet:yes:${market.ticker}` },
-        { text: `📉 Bet NO - ${(noBid * 100).toFixed(0)}¢`, callback_data: `bet:no:${market.ticker}` },
+        { text: `📈 Bet YES - ${(yesPrice * 100).toFixed(0)}¢`, callback_data: `bet:yes:${market.ticker}` },
+        { text: `📉 Bet NO - ${(noPrice * 100).toFixed(0)}¢`, callback_data: `bet:no:${market.ticker}` },
         { text: '⏭️ Skip', callback_data: 'bet:skip' }
       ]
     };

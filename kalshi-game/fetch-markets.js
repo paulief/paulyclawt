@@ -16,24 +16,48 @@ const AVOID_KEYWORDS = [
 ];
 
 /**
- * Fetch markets created in the last 24 hours from Kalshi
+ * Fetch markets by getting events first, then their markets
+ * This avoids the flood of MVE/parlay markets
  */
 async function fetchRecentMarkets() {
   try {
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    
-    const response = await axios.get(`${KALSHI_API_BASE}/markets`, {
+    // First, fetch interesting events
+    const eventsResponse = await axios.get(`${KALSHI_API_BASE}/events`, {
       params: {
-        limit: 100,
-        status: 'open',
-        // Note: Kalshi API might not have created_after, will use close_time as proxy
+        limit: 50,
+        status: 'open'
       },
       headers: {
         'Accept': 'application/json'
       }
     });
 
-    return response.data.markets || [];
+    const events = eventsResponse.data.events || [];
+    const allMarkets = [];
+
+    // Fetch markets for each event (limit to first 20 events to avoid rate limits)
+    for (const event of events.slice(0, 20)) {
+      try {
+        const marketsResponse = await axios.get(`${KALSHI_API_BASE}/markets`, {
+          params: {
+            event_ticker: event.event_ticker,
+            limit: 10
+          },
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        if (marketsResponse.data.markets) {
+          allMarkets.push(...marketsResponse.data.markets);
+        }
+      } catch (err) {
+        // Skip this event if it fails
+        console.error(`Failed to fetch markets for ${event.event_ticker}`);
+      }
+    }
+
+    return allMarkets;
   } catch (error) {
     console.error('Error fetching markets:', error.message);
     throw error;
@@ -51,6 +75,11 @@ function meetsInterestCriteria(market) {
 
   // Check status - 'active' is the new term for 'open'
   if (market.status !== 'active' && market.status !== 'open') {
+    return false;
+  }
+
+  // Skip MVE (multivariate/parlay) markets - they're complex and usually have low liquidity
+  if (market.mve_collection_ticker || market.strike_type === 'custom') {
     return false;
   }
 
